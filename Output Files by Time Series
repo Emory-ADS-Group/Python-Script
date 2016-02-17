@@ -1,0 +1,89 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Thurs Feb 17 1030 2016
+
+@author: RKROES
+
+This script provides time orderd sample data from a master file by 
+checking the date time afrer conversion to epoch time and populating new files 
+with the appropriate associated data in sets of 1,000,000 .
+"""
+
+import time
+import calendar
+
+
+EventTSFP = open("Working/EventsTS.csv", "r")  
+EventTSFP.seek(0) 
+
+ChnkSize = 1000000
+npings = sum(1 for line in EventTSFP)
+
+NChunks = int(npings/ChnkSize)
+
+#Create the initial output files
+OutPutFile = []
+for i in range(0,NChunks):
+    OutPutFile.append(open("EventTSChnk" +str(i) +".csv", "w")) 
+    
+EventTSFP.seek(0)
+
+#Add the header to each output file
+
+OutFP = {}  
+for i in range(0,NChunks):
+    EventTSFP = open("Working/EventsTS.csv", "r")  
+    EventTSFP.seek(0)
+    OutFP [i] = open("EventTSChnk" +str(i) +".csv", "w")
+    with EventTSFP as f1:
+            with OutFP[i] as f2:
+                f1.seek(0)
+                line=f1.readline()
+                f2.write(line)  
+
+#Check to see if the time ordered file, EventTSFP is actually in order by
+#checking the Epoch Time. The loop will stop and return an index value for the 
+#line if it is not in order
+
+EventTSFP.seek(0)
+Header = EventTSFP.readline()
+
+ind = 0
+LastEpochTime = 0
+tm1 = 0
+tm2 = 0
+
+oldTime = []
+
+for line in EventTSFP:
+    if ind < npings:
+        oldTime.append(line.strip("\r\n").split(",")[9])
+        tm1 = oldTime[ind][1:-1]
+        tm2 = time.strptime(tm1+" UTC","%Y-%m-%d %H:%M:%S %Z")
+        tm3 = calendar.timegm(tm2)
+        if tm3 >= LastEpochTime:
+            ind += 1
+            LastEpochTime = tm3
+        else:
+           print 'error at line:', ind 
+           break
+
+#Loop through the data to populate the output files.
+EventTSFP = open("Working/EventsTS.csv", "rb")
+header = EventTSFP.readline()
+lines = EventTSFP.readlines()
+for i in range (0,NChunks):
+    End = ((i+1)*ChnkSize)
+    if i == NChunks-1:
+        End = npings-1
+    OutFP[i] = open("EventTSChnk" +str(i) +".csv", "ab")
+    OutFP[i].seek(0)
+    for j in range((i*ChnkSize),End,1):
+        OutFP[i].write(lines[j])
+   
+#Close the files
+for i in range(0,NChunks):
+    OutFP[i].close()
+    
+    
+    
