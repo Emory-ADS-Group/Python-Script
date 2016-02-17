@@ -1,0 +1,72 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Thurs Feb 04 1830 2016
+
+@author: GEASTON RKROES
+
+This script randomly draws sample data from a master file by 
+using the unique set asset ids and populating new files with the appropriate
+associated data .
+"""
+
+import random
+
+#Random seed so who ever runs the script will have the same output files as
+#anyone else who runs the script
+random.seed(2016)
+
+#Establish the number of assets that each file will contain
+ChnkAssetCnt = 2000
+
+
+#Change this to where you have your Events file
+EventFP = open("locations/Events.csv", "r")  
+
+#Ensure the file pointer is at the top of your file
+EventFP.seek(0) 
+
+#loop to write out the AssetID and quantities
+AssetIDs = {}
+
+for line in EventFP:
+    ID = line.rstrip("\r\n").split(",")[1]
+    if ID in AssetIDs:
+        AssetIDs[ID] += 1
+    else:
+        AssetIDs[ID] = 1
+  
+#Randomly shuffle the list of AssetIDs 
+IDPerm = AssetIDs.keys()
+random.shuffle(IDPerm)
+
+
+#Loop through and if the AssetID is in the list of IDPerm assigned to each output file
+#write all the pings into the specific files
+NChnks = len(IDPerm)/ChnkAssetCnt
+
+OutFileList = []
+for i in range(0,NChnks):
+    OutFileList.append(open("EventChnk" +str(i) +".csv", "w" ))
+
+ChnkList = []
+for i in range(0,NChnks):
+    End = ((i+1)*ChnkAssetCnt)
+    if i == NChnks-1:
+        End = len(IDPerm)
+    ChnkList.append(IDPerm[(i*ChnkAssetCnt):(End)])
+    
+
+EventFP.seek(0)
+
+for line in EventFP:
+    ID = line.rstrip("\r\n").split(",")[1]
+    for i in range(0,NChnks):
+        if ID in ChnkList[i]:
+            OutFileList[i].write(line)
+    
+#Close all the files     
+EventFP.close()
+for i in range(0,NChnks):
+    OutFileList[i].close()
+    
+        
